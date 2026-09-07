@@ -29,12 +29,12 @@ pub var window = GuiWindow{
 
 pub fn render() void {
 	var y: f32 = 0;
-	const fpsCapText = if (main.settings.fpsCap) |fpsCap| std.fmt.allocPrint(main.stackAllocator.allocator, " (limit: {d:.0} Hz)", .{fpsCap}) catch unreachable else "";
+	const fpsCapText = if (main.settings.fpsCap) |fpsCap| main.stackAllocator.print(" (limit: {d:.0} Hz)", .{fpsCap}) else "";
 	defer main.stackAllocator.allocator.free(fpsCapText);
-	const fpsLimit = std.fmt.allocPrint(main.stackAllocator.allocator, "{s}{s}", .{
+	const fpsLimit = main.stackAllocator.print("{s}{s}", .{
 		fpsCapText,
 		if (main.settings.vsync) " (vsync)" else "",
-	}) catch unreachable;
+	});
 	defer main.stackAllocator.allocator.free(fpsLimit);
 	draw.print("fps: {d:.0} Hz{s}", .{1.0/main.lastDeltaTime.load(.monotonic), fpsLimit}, 0, y, 8);
 	y += 8;
@@ -63,7 +63,7 @@ pub fn render() void {
 		y += 8;
 		draw.print("EyePos: {d:.1} EyeVelocity: {d:.1} EyeCoyote: {d:.3}", .{player.getEyePosBlocking(), player.getEyeVelBlocking(), @max(0, player.getEyeCoyoteBlocking())}, 0, y, 8);
 		y += 8;
-		draw.print("Game Time: {} Day Time: {}", .{main.game.world.?.gameTime.load(.monotonic), main.game.world.?.dayTime.dayTime}, 0, y, 8);
+		draw.print("Game Time: {} Day Phase: {}", .{main.game.world.?.gameTime.load(.monotonic), main.game.world.?.dayTime.dayPhase}, 0, y, 8);
 		y += 8;
 		draw.print("Queue size: {}", .{main.threadPool.queueSize()}, 0, y, 8);
 		y += 8;

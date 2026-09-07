@@ -290,7 +290,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 		pub fn getServerToClientData(_: Vec3i, _: *Chunk, _: *BinaryWriter) void {}
 		pub fn getClientToServerData(_: Vec3i, _: *Chunk, _: *BinaryWriter) void {}
 
-		pub fn renderAll(_: Mat4f, _: Vec3f, _: Vec3d) void {}
+		pub fn renderAll(_: Vec3f) void {}
 	};
 
 	pub const @"cubyz:autocrafter" = struct { // MARK: cubyz:autocrafter
@@ -469,10 +469,6 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 		var pipeline: graphics.Pipeline = undefined;
 		var uniforms: struct {
 			ambientLight: c_int,
-			projectionMatrix: c_int,
-			viewMatrix: c_int,
-			playerPositionInteger: c_int,
-			playerPositionFraction: c_int,
 			quadIndex: c_int,
 			lightData: c_int,
 			chunkPos: c_int,
@@ -494,10 +490,11 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 					"",
 					&uniforms,
 					graphics.VertexArray.EmptyVertex,
-					&.{},
-					.{},
-					.{.depthTest = true, .depthCompare = .equal, .depthWrite = false},
-					.{.attachments = &.{.alphaBlending}},
+					.{
+						.rasterState = .{},
+						.depthStencilState = .{.depthTest = true, .depthCompare = .equal, .depthWrite = false},
+						.blendState = .{.attachments = &.{.alphaBlending}, .formats = &.{.world}},
+					},
 				);
 			}
 		}
@@ -632,7 +629,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			main.network.protocols.blockEntityUpdate.sendClientDataUpdateToServer(main.game.world.?.conn, pos);
 		}
 
-		pub fn renderAll(projectionMatrix: Mat4f, ambientLight: Vec3f, playerPos: Vec3d) void {
+		pub fn renderAll(ambientLight: Vec3f) void {
 			var oldFramebufferBinding: c_int = undefined;
 			c.glGetIntegerv(c.GL_DRAW_FRAMEBUFFER_BINDING, &oldFramebufferBinding);
 
@@ -652,7 +649,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 				finalFrameBuffer.updateSize(textureWidth, textureHeight, c.GL_RGBA8);
 				finalFrameBuffer.bind();
 				finalFrameBuffer.clear(.{0, 0, 0, 0});
-				signData.renderedTexture = .{.textureID = finalFrameBuffer.texture};
+				signData.renderedTexture = .{.textureID = finalFrameBuffer.texture, .vulkanImage = null};
 				defer c.glDeleteFramebuffers(1, &finalFrameBuffer.frameBuffer);
 
 				const oldTranslation = graphics.draw.setTranslation(.{textureMargin, textureMargin});
@@ -672,10 +669,6 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			main.renderer.chunk_meshing.vao.bind();
 
 			c.glUniform3f(uniforms.ambientLight, ambientLight[0], ambientLight[1], ambientLight[2]);
-			c.glUniformMatrix4fv(uniforms.projectionMatrix, 1, c.GL_TRUE, @ptrCast(&projectionMatrix));
-			c.glUniformMatrix4fv(uniforms.viewMatrix, 1, c.GL_TRUE, @ptrCast(&main.game.camera.viewMatrix));
-			c.glUniform3i(uniforms.playerPositionInteger, @floor(playerPos[0]), @floor(playerPos[1]), @floor(playerPos[2]));
-			c.glUniform3f(uniforms.playerPositionFraction, @floatCast(@mod(playerPos[0], 1)), @floatCast(@mod(playerPos[1], 1)), @floatCast(@mod(playerPos[2], 1)));
 
 			outer: for (StorageClient.storage.dense.items) |signData| {
 				if (main.blocks.meshes.model(signData.block).model().internalQuads.len == 0) continue;
@@ -728,8 +721,8 @@ pub fn getByID(_id: ?[]const u8) ?*const BlockEntityType {
 	return null;
 }
 
-pub fn renderAll(projectionMatrix: Mat4f, ambientLight: Vec3f, playerPos: Vec3d) void {
+pub fn renderAll(ambientLight: Vec3f) void {
 	inline for (@typeInfo(BlockEntityTypes).@"struct".decls) |declaration| {
-		@field(BlockEntityTypes, declaration.name).renderAll(projectionMatrix, ambientLight, playerPos);
+		@field(BlockEntityTypes, declaration.name).renderAll(ambientLight);
 	}
 }

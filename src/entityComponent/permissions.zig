@@ -30,7 +30,7 @@ pub const client = struct {
 	}
 };
 // ############################# Server only stuff ################################
-pub const server = struct {
+pub const server = struct { // MARK: server
 	pub const Component = struct {
 		permissions: main.server.permission.Permissions,
 

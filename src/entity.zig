@@ -79,7 +79,6 @@ pub fn loadComponent(comptime side: main.sync.Side, componentId: EntityComponent
 		std.log.err("unknown Component Id {} ", .{componentId});
 		return error.UnknownComponentId;
 	}
-	std.log.debug("is this recording properly", .{});
 	var componentReader = BinaryReader.init(componentData);
 	if (componentList[componentId]) |vtable| {
 		switch (side) {
@@ -201,7 +200,6 @@ pub const server = struct {
 		if (EntityComponent.server.get(entity)) |ptr| {
 			if (ptr.save(&binaryWriter, .playerNearby) == .save) {
 				for (users) |user| {
-					std.log.debug("testing this {}", .{user.conn.isServerSide()});
 					main.network.protocols.EntityComponentUpdate.load(user.conn, entity, EntityComponent.entityComponentID, EntityComponent.entityComponentVersion, binaryWriter.data.items);
 				}
 			}

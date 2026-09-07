@@ -71,7 +71,6 @@ pub const client = struct {
 	}
 
 	pub fn load(entity: Entity, reader: *utils.BinaryReader, version: u32) main.entity.EntityComponentLoadError!void {
-		std.log.debug("dpes tje client recieve the massage", .{});
 		if (version != entityComponentVersion) return error.InvalidComponentVersion;
 		var ptr: *Component = undefined;
 		if (components.get(entity)) |p| {
@@ -91,7 +90,6 @@ pub const client = struct {
 	pub fn modifyComponent(entity: Entity, reader: *utils.BinaryReader) void {
 		_ = entity;
 		_ = reader;
-		std.log.debug("what? should not show up here", .{});
 	}
 };
 
@@ -153,7 +151,6 @@ pub const server = struct {
 	pub fn addHealth(entity: Entity, healthChange: f32) void {
 		const health = &(components.get(entity) orelse return).health;
 		health.* += healthChange;
-		std.log.debug("modifed component {}", .{health});
 
 		if (health.* <= 0) {
 			die(entity);
@@ -164,8 +161,7 @@ pub const server = struct {
 
 	fn die(entity: Entity) void {
 		const component = components.get(entity) orelse return;
-		const health = &component.health;
-		const maxHealth = &component.maxHealth;
 		component.health = component.maxHealth;
+		main.sync.server.executeCommand(.{.kill = .{.target = entity}}, null);
 	}
 };

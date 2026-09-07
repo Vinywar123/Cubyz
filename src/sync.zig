@@ -245,7 +245,8 @@ pub const Command = struct { // MARK: Command
 		clear = 8,
 		updateBlock = 9,
 		chatCommand = 12,
-		modifyComponent = 10,
+		kill = 19,
+		modifyComponent = 20,
 	};
 	pub const Payload = union(PayloadType) {
 		open: Open,
@@ -266,6 +267,7 @@ pub const Command = struct { // MARK: Command
 		clear: Clear,
 		updateBlock: UpdateBlock,
 		chatCommand: ChatCommand,
+		kill: Kill,
 		modifyComponent: ModifyComponent,
 	};
 
@@ -278,7 +280,8 @@ pub const Command = struct { // MARK: Command
 		takeFromBag = 8,
 		useDurability = 4,
 		addEnergy = 6,
-		modifyComponent = 9,
+		kill = 9,
+		modifyComponent = 10,
 	};
 
 	/// The BaseOperation is the primitive operation used by Command. It is responsible for executing the operation as
@@ -328,12 +331,16 @@ pub const Command = struct { // MARK: Command
 			energy: f32,
 			previous: f32,
 		},
+		kill: struct {
+			target: ?*main.server.User,
+			previous: Vec3d,
+		},
 		modifyComponent: struct {
 			target: ?*main.server.User,
 			componentId: u32,
 			modification: []const u8,
 			previous: []const u8,
-		}
+		},
 	};
 
 	const SyncOperationType = enum(u8) {
@@ -630,6 +637,9 @@ pub const Command = struct { // MARK: Command
 				.addEnergy => |info| {
 					main.game.Player.super.energy = info.previous;
 				},
+				.kill => |info| {
+					main.game.Player.kill(info.previous);
+				},
 				.modifyComponent => |info| {
 					var reader = BinaryReader.init(info.previous);
 					const entityId: main.entity.Entity = @enumFromInt(reader.readVarInt(u32) catch return);
@@ -645,7 +655,7 @@ pub const Command = struct { // MARK: Command
 	fn finalize(self: Command, allocator: NeverFailingAllocator, side: Side, reader: *BinaryReader) !void {
 		for (self.baseOperations.items) |step| {
 			switch (step) {
-				.move, .swap, .create, .moveToBag, .takeFromBag, .addEnergy, .modifyComponent => {},
+				.move, .swap, .create, .moveToBag, .takeFromBag, .addEnergy, .kill, .modifyComponent => {},
 				.delete => |info| {
 					info.item.deinit();
 				},
@@ -809,6 +819,16 @@ pub const Command = struct { // MARK: Command
 					main.game.Player.super.energy = std.math.clamp(main.game.Player.super.energy + info.energy, 0, main.game.Player.super.maxEnergy);
 				}
 			},
+			.kill => |*info| {
+				if (side == .server) {
+					info.previous = info.target.?.lastPos;
+
+					self.syncOperations.append(allocator, .{.kill = .{
+						.target = info.target.?,
+						.spawnPoint = info.target.?.getSpawnPos(),
+					}});
+				}
+			},
 			.modifyComponent => |*info| {
 				if (side == .server) {
 					var reader = BinaryReader.init(info.modification);
@@ -833,7 +853,6 @@ pub const Command = struct { // MARK: Command
 						main.entity.modifyComponent(.server, componentId, entityId,reader.remaining) catch return;
 					}
 				} else {
-					std.log.debug("hello right here", .{});
 					var binaryReader = BinaryReader.init(info.modification);
 					const entityId: main.entity.Entity = @enumFromInt(binaryReader.readVarInt(u32) catch return);
 					const componentId = info.componentId;
@@ -1785,6 +1804,44 @@ pub const Command = struct { // MARK: Command
 			return .{
 				.message = main.globalAllocator.dupe(u8, try reader.readSlice(len)),
 			};
+		}
+	};
+
+	const Kill = struct { // MARK: ModifyComponent
+		target: main.entity.Entity,
+
+		pub fn run(self: Kill, ctx: Context) error{serverFailure}!void {
+			var target: ?*main.server.User = null;
+
+			if (ctx.side == .server) {
+				const userList = main.server.getUserList(main.stackAllocator);
+				defer main.stackAllocator.free(userList);
+				for (userList) |user| {
+					if (user.id == self.target) {
+						target = user;
+						break;
+					}
+				}
+
+				if (target == null) return error.serverFailure;
+
+				ctx.execute(.{.kill = .{
+				.target = target,
+				.previous = Vec3d{0, 0, 0},
+				}});
+			}
+		}
+
+		fn serialize(self: Kill, writer: *BinaryWriter) void {
+			writer.writeEnum(main.entity.Entity, self.target);
+		}
+
+		fn deserialize(reader: *BinaryReader, _: Side, user: ?*main.server.User) !Kill {
+			const result: Kill = .{
+				.target = try reader.readEnum(main.entity.Entity),
+			};
+			if (user.?.id != result.target) return error.Invalid;
+			return result;
 		}
 	};
 

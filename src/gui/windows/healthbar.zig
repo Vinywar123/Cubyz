@@ -45,7 +45,7 @@ pub fn deinit() void {
 
 pub fn render() void {
 	if (main.game.Player.isCreative()) return;
-	
+
 	const playerHealth: f32 = @"cubyz:health".client.getHealth(main.game.Player.id) orelse 0.0;
 	const playerMaxHealth: f32 = @"cubyz:health".client.getMaxHealth(main.game.Player.id) orelse 0.0;
 

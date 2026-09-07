@@ -123,7 +123,7 @@ pub const server = struct {
 	pub fn getMaxHealth(entity: Entity) ?f32 {
 		return (components.get(entity) orelse return null).maxHealth;
 	}
-	
+
 	pub fn loadFromData(entity: Entity, reader: *utils.BinaryReader, version: u32) main.entity.EntityComponentLoadError!void {
 		if (version != entityComponentVersion) return error.InvalidComponentVersion;
 		const component = components.add(main.globalAllocator, entity);

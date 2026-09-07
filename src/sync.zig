@@ -850,7 +850,7 @@ pub const Command = struct { // MARK: Command
 					}
 
 					if (actionType == .modifyServer) {
-						main.entity.modifyComponent(.server, componentId, entityId,reader.remaining) catch return;
+						main.entity.modifyComponent(.server, componentId, entityId, reader.remaining) catch return;
 					}
 				} else {
 					var binaryReader = BinaryReader.init(info.modification);
@@ -871,7 +871,6 @@ pub const Command = struct { // MARK: Command
 						}
 					}
 
-										
 					if (actionType == .load) {
 						const componentVersion = binaryReader.readVarInt(u32) catch return;
 						main.entity.loadComponent(.client, componentId, entityId, binaryReader.remaining, componentVersion) catch return;
@@ -1826,8 +1825,8 @@ pub const Command = struct { // MARK: Command
 				if (target == null) return error.serverFailure;
 
 				ctx.execute(.{.kill = .{
-				.target = target,
-				.previous = Vec3d{0, 0, 0},
+					.target = target,
+					.previous = Vec3d{0, 0, 0},
 				}});
 			}
 		}

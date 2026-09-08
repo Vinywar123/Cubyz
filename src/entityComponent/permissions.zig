@@ -23,6 +23,10 @@ pub const client = struct {
 	pub fn init() void {}
 	pub fn deinit() void {}
 	pub fn clear() void {}
+	pub fn get(entity: Entity) null {
+		_ = entity;
+		return null;
+	}
 
 	pub fn modifyComponent(entity: Entity, reader: *utils.BinaryReader) void {
 		_ = entity;

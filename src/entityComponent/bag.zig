@@ -48,6 +48,9 @@ pub const client = struct {
 		components.clear();
 	}
 
+	pub fn get(entity: Entity) ?Component {
+		return (components.get(entity) orelse return null).*;
+	}
 	pub fn getBag(entity: Entity) ?*items.Inventory.BagInventory {
 		return &(components.get(entity) orelse return null).bag;
 	}

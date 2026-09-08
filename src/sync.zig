@@ -835,6 +835,7 @@ pub const Command = struct { // MARK: Command
 					const entityId: main.entity.Entity = @enumFromInt(reader.readVarInt(u32) catch return);
 					const componentId = info.componentId;
 					const actionType: main.entity.ComponentActionType = reader.readEnum(main.entity.ComponentActionType) catch return;
+					std.log.debug("side {} actiontype {}", .{side, actionType});
 
 					inline for (@typeInfo(main.entity.components).@"struct".decls) |decl| {
 						if (@field(main.entity.components, decl.name).server.get(entityId)) |component| {
@@ -857,6 +858,7 @@ pub const Command = struct { // MARK: Command
 					const entityId: main.entity.Entity = @enumFromInt(binaryReader.readVarInt(u32) catch return);
 					const componentId = info.componentId;
 					const actionType: main.entity.ComponentActionType = binaryReader.readEnum(main.entity.ComponentActionType) catch return;
+					std.log.debug("side {} actiontype {}", .{side, actionType});
 
 					inline for (@typeInfo(main.entity.components).@"struct".decls) |decl| {
 						if (@field(main.entity.components, decl.name).server.get(entityId)) |component| {

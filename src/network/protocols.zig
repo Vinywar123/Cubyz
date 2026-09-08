@@ -1111,10 +1111,7 @@ pub const EntityComponentUpdate = struct { // MARK: EntityComponentUpdate
 		execute(conn, entityId, componentId, writer.data.items);
 	}
 
-	fn execute(conn: *Connection, entityId: main.entity.Entity, componentId: u32, data: []const u8) void {
-		switch (conn.isServerSide()) {
-			true => main.sync.client.executeCommand(.{.modifyComponent = .{.target = entityId, .componentId = componentId, .modification = data}}),
-			false => main.sync.client.executeCommand(.{.modifyComponent = .{.target = entityId, .componentId = componentId, .modification = data}}),
-		}
+	fn execute(_: *Connection, entityId: main.entity.Entity, componentId: u32, data: []const u8) void {
+		main.sync.client.executeCommand(.{.modifyComponent = .{.target = entityId, .componentId = componentId, .modification = data}});
 	}
 };

@@ -26,6 +26,11 @@ pub const entityComponentVersion = 0;
 pub const client = struct {
 	const Component = struct {
 		playerIndex: u32,
+		pub fn save(self: Component, writer: *utils.BinaryWriter, audience: main.entity.AudienceInfo) main.entity.ComponentSaveBehaviour {
+			writer.writeVarInt(u32, self.playerIndex);
+			if (audience == .disk) return .discard;
+			return .save;
+		}
 	};
 	pub var components: main.utils.SparseSet(Component, Entity) = .{};
 

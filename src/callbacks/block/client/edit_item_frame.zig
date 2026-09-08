@@ -15,8 +15,8 @@ pub fn run(_: *anyopaque, params: main.callbacks.ClientBlockCallback.Params) mai
 		std.log.err("Can only edit item frame if block entity of the block is a item frame.", .{});
 		return .ignored;
 	}
-	main.block_entity.BlockEntityTypes.@"cubyz:sign".StorageClient.mutex.lock();
-	defer main.block_entity.BlockEntityTypes.@"cubyz:sign".StorageClient.mutex.unlock();
+	main.block_entity.BlockEntityTypes.@"cubyz:item_frame".StorageClient.mutex.lock();
+	defer main.block_entity.BlockEntityTypes.@"cubyz:item_frame".StorageClient.mutex.unlock();
 	const heldItem = main.game.Player.inventory.getItem(main.game.Player.selectedSlot);
 	main.block_entity.BlockEntityTypes.@"cubyz:item_frame".updateTextFromClient(params.blockPos, heldItem);
 

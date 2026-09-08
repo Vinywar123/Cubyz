@@ -541,10 +541,10 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 
 	pub const @"cubyz:item_frame" = struct { // MARK: cubyz:item_frame
 		const StorageServer = BlockEntityDataStorage(struct {
-			text: main.items.Item,
+			item: main.items.Item,
 		});
 		pub const StorageClient = BlockEntityDataStorage(struct {
-			text: main.items.Item,
+			item: main.items.Item,
 			renderedTexture: ?main.graphics.Texture = null,
 			blockPos: Vec3i,
 			block: main.blocks.Block,
@@ -640,7 +640,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 				.blockPos = pos,
 				.block = chunk.data.getValue(chunk.getLocalBlockPos(pos).toIndex()),
 				.renderedTexture = null,
-				.text = main.items.Item.fromBytes(event.update) catch {
+				.item = main.items.Item.fromBytes(event.update) catch {
 					const entry = StorageClient.remove(pos, chunk) orelse return;
 					entry.deinit();
 					return;
@@ -661,7 +661,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			defer StorageServer.mutex.unlock();
 
 			const data = StorageServer.getOrPut(pos, chunk);
-			data.valuePtr.text = main.items.Item.fromBytes(event.update) catch .null;
+			data.valuePtr.item = main.items.Item.fromBytes(event.update) catch .null;
 		}
 
 		pub const onStoreServerToClient = onStoreServerToDisk;
@@ -670,14 +670,14 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			defer StorageServer.mutex.unlock();
 
 			const data = StorageServer.getByIndex(entity) orelse return;
-			main.items.Item.toBytes(data.text, writer);
+			main.items.Item.toBytes(data.item, writer);
 		}
 		pub fn getServerToClientData(pos: Vec3i, chunk: *Chunk, writer: *BinaryWriter) void {
 			StorageServer.mutex.lock();
 			defer StorageServer.mutex.unlock();
 
 			const data = StorageServer.get(pos, chunk) orelse return;
-			main.items.Item.toBytes(data.text, writer);
+			main.items.Item.toBytes(data.item, writer);
 		}
 
 		pub fn getClientToServerData(pos: Vec3i, chunk: *Chunk, writer: *BinaryWriter) void {
@@ -685,7 +685,8 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			defer StorageClient.mutex.unlock();
 
 			const data = StorageClient.get(pos, chunk) orelse return;
-			main.items.Item.toBytes(data.text, writer);
+			if (data.item == .null) return;
+			main.items.Item.toBytes(data.item, writer);
 		}
 
 		pub fn updateTextFromClient(pos: Vec3i, newText: main.items.Item) void {
@@ -709,7 +710,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 					.blockPos = pos,
 					.block = mesh.chunk.data.getValue(localPos.toIndex()),
 					.renderedTexture = null,
-					.text = newText,
+					.item = newText,
 				};
 			}
 
@@ -723,8 +724,8 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			StorageClient.mutex.lock();
 			defer StorageClient.mutex.unlock();
 
-			for (StorageClient.storage.dense.items) |*signData| {
-				if (signData.renderedTexture != null) continue;
+			for (StorageClient.storage.dense.items) |*itemFrameData| {
+				if (itemFrameData.renderedTexture != null) continue;
 
 				var oldViewport: [4]c_int = undefined;
 				c.glGetIntegerv(c.GL_VIEWPORT, &oldViewport);
@@ -736,7 +737,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 				finalFrameBuffer.updateSize(textureWidth, textureHeight, c.GL_RGBA8);
 				finalFrameBuffer.bind();
 				finalFrameBuffer.clear(.{0, 0, 0, 0});
-				signData.renderedTexture = .{.textureID = finalFrameBuffer.texture, .vulkanImage = null};
+				itemFrameData.renderedTexture = .{.textureID = finalFrameBuffer.texture, .vulkanImage = null};
 				defer c.glDeleteFramebuffers(1, &finalFrameBuffer.frameBuffer);
 
 				const oldTranslation = graphics.draw.setTranslation(.{textureMargin, textureMargin});
@@ -744,8 +745,9 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 				const oldClip = graphics.draw.setClip(.{textureWidth - 2*textureMargin, textureHeight - 2*textureMargin});
 				defer graphics.draw.restoreClip(oldClip);
 
+				if (itemFrameData.item == .null) continue;
 				const iconSizeTarget = 96;
-				signData.text.render(Vec2f{0, 0}, Vec2f{textureWidth - 2*textureMargin, textureHeight - 2*textureMargin}, textureMargin + (@max(textureWidth, textureHeight) - iconSizeTarget)/2);
+				itemFrameData.item.render(Vec2f{0, 0}, Vec2f{textureWidth - 2*textureMargin, textureHeight - 2*textureMargin}, textureMargin + (@max(textureWidth, textureHeight) - iconSizeTarget)/2);
 			}
 
 			c.glBindFramebuffer(c.GL_FRAMEBUFFER, @bitCast(oldFramebufferBinding));
@@ -755,18 +757,18 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 
 			c.glUniform3f(uniforms.ambientLight, ambientLight[0], ambientLight[1], ambientLight[2]);
 
-			outer: for (StorageClient.storage.dense.items) |signData| {
-				if (main.blocks.meshes.model(signData.block).model().internalQuads.len == 0) continue;
-				const quad = main.blocks.meshes.model(signData.block).model().internalQuads[0];
+			outer: for (StorageClient.storage.dense.items) |itemFrameData| {
+				if (main.blocks.meshes.model(itemFrameData.block).model().internalQuads.len == 0) continue;
+				const quad = main.blocks.meshes.model(itemFrameData.block).model().internalQuads[0];
 
-				signData.renderedTexture.?.bindTo(0);
+				itemFrameData.renderedTexture.?.bindTo(0);
 
 				c.glUniform1i(uniforms.quadIndex, @intFromEnum(quad));
-				const mesh = main.renderer.mesh_storage.getMesh(main.chunk.ChunkPosition.initFromWorldPos(signData.blockPos, 1)) orelse continue :outer;
-				const light: [4]u32 = main.renderer.lighting.getLight(mesh, signData.blockPos -% Vec3i{mesh.pos.wx, mesh.pos.wy, mesh.pos.wz}, 0, quad);
+				const mesh = main.renderer.mesh_storage.getMesh(main.chunk.ChunkPosition.initFromWorldPos(itemFrameData.blockPos, 1)) orelse continue :outer;
+				const light: [4]u32 = main.renderer.lighting.getLight(mesh, itemFrameData.blockPos -% Vec3i{mesh.pos.wx, mesh.pos.wy, mesh.pos.wz}, 0, quad);
 				c.glUniform4ui(uniforms.lightData, light[0], light[1], light[2], light[3]);
-				c.glUniform3i(uniforms.chunkPos, signData.blockPos[0] & ~main.chunk.chunkMask, signData.blockPos[1] & ~main.chunk.chunkMask, signData.blockPos[2] & ~main.chunk.chunkMask);
-				c.glUniform3i(uniforms.blockPos, signData.blockPos[0] & main.chunk.chunkMask, signData.blockPos[1] & main.chunk.chunkMask, signData.blockPos[2] & main.chunk.chunkMask);
+				c.glUniform3i(uniforms.chunkPos, itemFrameData.blockPos[0] & ~main.chunk.chunkMask, itemFrameData.blockPos[1] & ~main.chunk.chunkMask, itemFrameData.blockPos[2] & ~main.chunk.chunkMask);
+				c.glUniform3i(uniforms.blockPos, itemFrameData.blockPos[0] & main.chunk.chunkMask, itemFrameData.blockPos[1] & main.chunk.chunkMask, itemFrameData.blockPos[2] & main.chunk.chunkMask);
 
 				c.glDrawElements(c.GL_TRIANGLES, 6, c.GL_UNSIGNED_INT, null);
 			}

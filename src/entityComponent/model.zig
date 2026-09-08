@@ -38,6 +38,11 @@ pub const client = struct {
 
 			main.systems.systems.modelRenderer.client.nodeBuffer.free(self.bufferAllocation);
 		}
+		pub fn save(self: Component, writer: *utils.BinaryWriter, audience: main.entity.AudienceInfo) main.entity.ComponentSaveBehaviour {
+			_ = audience;
+			writer.writeVarInt(u32, self.entityModel.index);
+			return .save;
+		}
 	};
 	pub var components: main.utils.SparseSet(Component, Entity) = .{};
 

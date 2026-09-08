@@ -689,7 +689,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			main.items.Item.toBytes(data.item, writer);
 		}
 
-		pub fn updateTextFromClient(pos: Vec3i, newText: main.items.Item) void {
+		pub fn updateItemFromClient(pos: Vec3i, newItem: main.items.Item) void {
 			{
 				const mesh = main.renderer.mesh_storage.getMesh(.initFromWorldPos(pos, 1)) orelse return;
 				mesh.mutex.lock();
@@ -710,7 +710,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 					.blockPos = pos,
 					.block = mesh.chunk.data.getValue(localPos.toIndex()),
 					.renderedTexture = null,
-					.item = newText,
+					.item = newItem,
 				};
 			}
 

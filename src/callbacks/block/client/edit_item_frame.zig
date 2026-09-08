@@ -18,7 +18,7 @@ pub fn run(_: *anyopaque, params: main.callbacks.ClientBlockCallback.Params) mai
 	main.block_entity.BlockEntityTypes.@"cubyz:item_frame".StorageClient.mutex.lock();
 	defer main.block_entity.BlockEntityTypes.@"cubyz:item_frame".StorageClient.mutex.unlock();
 	const heldItem = main.game.Player.inventory.getItem(main.game.Player.selectedSlot);
-	main.block_entity.BlockEntityTypes.@"cubyz:item_frame".updateTextFromClient(params.blockPos, heldItem);
+	main.block_entity.BlockEntityTypes.@"cubyz:item_frame".updateItemFromClient(params.blockPos, heldItem);
 
 	return .handled;
 }

@@ -277,7 +277,7 @@ pub const Command = struct { // MARK: Command
 		updateBlock: UpdateBlock,
 		addHealth: AddHealth,
 		chatCommand: ChatCommand,
-		modifyComponent: ModifyComponent
+		modifyComponent: ModifyComponent,
 	};
 
 	const BaseOperationType = enum(u8) {
@@ -903,7 +903,7 @@ pub const Command = struct { // MARK: Command
 					std.log.debug("side {} actiontype {}", .{side, actionType});
 
 					inline for (@typeInfo(main.entity.components).@"struct".decls) |decl| {
-						if (@field(main.entity.components, decl.name).server.get(entityId)) |component| {
+						if (@field(main.entity.components, decl.name).client.get(entityId)) |component| {
 							var binaryWriter = main.utils.BinaryWriter.init(main.stackAllocator);
 							defer binaryWriter.deinit();
 
